@@ -61,12 +61,7 @@ const Masterclass = () => {
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) return false;
-    
-    // Check for company domain (not free email providers)
-    const freeEmailDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com'];
-    const domain = email.split('@')[1].toLowerCase();
-    return !freeEmailDomains.includes(domain);
+    return emailRegex.test(email);
   };
 
   const validatePhone = (phone: string): boolean => {
@@ -243,7 +238,7 @@ const Masterclass = () => {
     }
     
     if (!validateEmail(formData.email)) {
-      errors.email = 'Please use your work email address';
+      errors.email = 'Please enter a valid email address';
     }
     
     if (!validatePhone(formData.phone)) {
@@ -446,14 +441,14 @@ const Masterclass = () => {
               </div>
               
               <div>
-                <Label htmlFor="email">Work Email *</Label>
+                <Label htmlFor="email">Email Address *</Label>
                 <Input
                   id="email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className={formErrors.email ? 'border-red-500' : ''}
-                  placeholder="john@lawfirm.com"
+                  placeholder="john@example.com"
                 />
                 {formErrors.email && (
                   <p className="text-red-500 text-sm mt-1">{formErrors.email}</p>
@@ -678,7 +673,7 @@ const Masterclass = () => {
                   type="email"
                   value={contactFormData.email}
                   onChange={(e) => setContactFormData({ ...contactFormData, email: e.target.value })}
-                  placeholder="john@lawfirm.com"
+                  placeholder="john@example.com"
                 />
               </div>
               <div>
