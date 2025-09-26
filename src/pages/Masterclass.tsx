@@ -265,50 +265,68 @@ const Masterclass = () => {
     }
     
     try {
-      // Send to GHL webhook
-      await fetch('https://services.leadconnectorhq.com/hooks/97l9HRK2FQf6v9i8xmYO/webhook-trigger/masterclass-registration', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
+      // Store form data in sessionStorage first (so user doesn't lose progress)
+      const userFormData = {
+        full_name: formData.fullName,
+        email: formData.email,
+        phone: formData.phone,
+        practice_area: formData.practiceArea,
+        firm_name: formData.firmName
+      };
+      sessionStorage.setItem('user-form-data', JSON.stringify(userFormData));
 
-      // For regular traffic (not source=fb): send to API, store in sessionStorage, and redirect
-      const urlParams = new URLSearchParams(window.location.search);
-      const source = urlParams.get('source');
-      
-      if (source !== 'fb') {
-        // Send form data to webhook via Supabase Edge Function
-        await fetch('https://uavilthuyclqjnxgjmwr.supabase.co/functions/v1/submit-form-data', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            full_name: formData.fullName,
-            email: formData.email,
-            phone: formData.phone,
-            practice_area: formData.practiceArea,
-            firm_name: formData.firmName,
-            source: 'form'
-          })
-        });
-
-        // Store form data in sessionStorage
-        const userFormData = {
-          full_name: formData.fullName,
-          email: formData.email,
-          phone: formData.phone,
-          practice_area: formData.practiceArea,
-          firm_name: formData.firmName
-        };
-        sessionStorage.setItem('user-form-data', JSON.stringify(userFormData));
-      }
-      
+      // Grant access immediately to improve user experience
       grantAccess(formData.email, formData.fullName, formData.firmName);
       
       toast({
         title: "Welcome to Practical AI for Law Firms!",
         description: "You now have 48-hour access to the workshop replay."
       });
+
+      // Send webhook calls in background (don't block user experience)
+      try {
+        // Send to GHL webhook
+        const ghlResponse = await fetch('https://services.leadconnectorhq.com/hooks/97l9HRK2FQf6v9i8xmYO/webhook-trigger/masterclass-registration', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        });
+        console.log('GHL webhook response:', ghlResponse.status);
+      } catch (ghlError) {
+        console.error('GHL webhook failed:', ghlError);
+        // Don't throw error - this is non-critical for user experience
+      }
+
+      // For regular traffic (not source=fb): send to Supabase Edge Function
+      const urlParams = new URLSearchParams(window.location.search);
+      const source = urlParams.get('source');
+      
+      if (source !== 'fb') {
+        try {
+          const supabaseResponse = await fetch('https://uavilthuyclqjnxgjmwr.supabase.co/functions/v1/submit-form-data', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVhdmlsdGh1eWNscWpueGdqbXdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3MDgzOTcsImV4cCI6MjA2NjI4NDM5N30.FsYH0fD1pCG_z1S9dgCkQ8xoiQ4boXlpc48D8k0XeZk`
+            },
+            body: JSON.stringify({
+              full_name: formData.fullName,
+              email: formData.email,
+              phone: formData.phone,
+              practice_area: formData.practiceArea,
+              firm_name: formData.firmName,
+              source: 'form'
+            })
+          });
+          console.log('Supabase webhook response:', supabaseResponse.status);
+        } catch (supabaseError) {
+          console.error('Supabase webhook failed:', supabaseError);
+          // Don't throw error - this is non-critical for user experience
+        }
+      }
+      
     } catch (error) {
+      console.error('Form submission error:', error);
       toast({
         title: "Registration Error",
         description: "Please try again or contact support.",
